@@ -49,7 +49,9 @@ export const defaultRecipe = () => ({
     {
       id: uid(), name: "Stockgare", duration: 300, tempMin: 22, tempMax: 28,
       type: "fermentation", notes: "Teig auf doppeltes Volumen", flexMin: 240, flexMax: 480,
-      repeat: { id: uid(), name: "Dehnen & Falten", duration: 5, count: 4, type: "aktiv", notes: "Teig sanft dehnen und falten" },
+      repeats: [
+        { id: uid(), name: "Dehnen & Falten", duration: 5, count: 4, type: "aktiv", notes: "Teig sanft dehnen und falten", position: "interleave" },
+      ],
     },
     { id: uid(), name: "Formen", duration: 15, tempMin: null, tempMax: null, type: "aktiv", notes: "Rundwirken, in Gärkorb" },
     { id: uid(), name: "Stückgare", duration: 720, tempMin: 4, tempMax: 6, type: "fermentation", notes: "Kühlschrank, abgedeckt", flexMin: 600, flexMax: 960 },
