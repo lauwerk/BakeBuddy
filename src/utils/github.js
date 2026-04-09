@@ -2,10 +2,20 @@ import { GH_CONFIG_KEY, GH_FILE } from "../constants.js";
 
 export const loadGHConfig = () => {
   try {
-    return JSON.parse(localStorage.getItem(GH_CONFIG_KEY)) || null;
-  } catch {
-    return null;
+    const stored = JSON.parse(localStorage.getItem(GH_CONFIG_KEY));
+    if (stored) return stored;
+  } catch {}
+
+  // Fallback: Token wurde beim Build via GitHub Actions Secret eingebettet.
+  // Wird automatisch in localStorage gespeichert, damit der Token dauerhaft bleibt.
+  const envToken = import.meta.env.VITE_GH_TOKEN;
+  if (envToken) {
+    const cfg = { owner: "lauwerk", repo: "BakeBuddy-Data", token: envToken };
+    try { localStorage.setItem(GH_CONFIG_KEY, JSON.stringify(cfg)); } catch {}
+    return cfg;
   }
+
+  return null;
 };
 
 export const saveGHConfig = (cfg) => {
