@@ -277,14 +277,28 @@ export const RecipeEditor = ({ recipe, onSave, onDelete, onBack, onDuplicate, on
                 <button onClick={() => rmStep(st.id)} style={S.mini}>{ICO.x(13)}</button>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 5, paddingLeft: 28, fontSize: 13 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <label style={{ color: "var(--muted)", width: 42 }}>Typ</label>
-                  <select value={st.type} onChange={e => setStep(st.id, "type", e.target.value)} style={S.inSel}>
-                    {Object.keys(stepTypes).map(t => <option key={t} value={t}>{stepTypes[t]} {t}</option>)}
-                  </select>
-                  <span style={{ fontSize: 10, color: "var(--muted)", marginLeft: 2 }}>
-                    {["fermentation", "ruhe", "kühlen"].includes(st.type) ? "⏸ passiv" : "▶ aktiv"}
-                  </span>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
+                  <label style={{ color: "var(--muted)", width: 42, paddingTop: 4 }}>Typ</label>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                    <div style={{ display: "flex", gap: 3, alignItems: "center" }}>
+                      <span style={{ fontSize: 10, color: "var(--muted)", width: 40 }}>▶ aktiv</span>
+                      {[["aktiv", "🤲 aktiv"], ["backen", "🔥 backen"]].map(([t, label]) => (
+                        <button key={t} onClick={() => setStep(st.id, "type", t)}
+                          style={{ ...S.scBtn, ...(st.type === t ? S.scBtnAct : {}), fontSize: 11, padding: "3px 8px" }}>
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                    <div style={{ display: "flex", gap: 3, alignItems: "center" }}>
+                      <span style={{ fontSize: 10, color: "var(--muted)", width: 40 }}>⏸ passiv</span>
+                      {[["fermentation", "🫧 Gare"], ["ruhe", "😴 Ruhe"], ["kühlen", "❄️ Kühlen"]].map(([t, label]) => (
+                        <button key={t} onClick={() => setStep(st.id, "type", t)}
+                          style={{ ...S.scBtn, ...(st.type === t ? S.scBtnAct : {}), fontSize: 11, padding: "3px 8px" }}>
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <label style={{ color: "var(--muted)", width: 42 }}>
@@ -320,7 +334,7 @@ export const RecipeEditor = ({ recipe, onSave, onDelete, onBack, onDuplicate, on
                           Entfernen
                         </button>
                       </div>
-                      <div style={{ display: "flex", gap: 4, marginBottom: 6 }}>
+                      <div style={{ display: "flex", gap: 4, marginBottom: 4 }}>
                         {[["prefix", "▶ Vorab"], ["interleave", "🔄 Verteilt"]].map(([val, label]) => (
                           <button key={val}
                             onClick={() => setRepeat(st.id, rep.id, "position", val)}
@@ -329,6 +343,20 @@ export const RecipeEditor = ({ recipe, onSave, onDelete, onBack, onDuplicate, on
                             {label}
                           </button>
                         ))}
+                      </div>
+                      <div style={{ display: "flex", gap: 4, marginBottom: 6 }}>
+                        {[["aktiv", "▶ aktiv"], ["passiv", "⏸ passiv"]].map(([mode, label]) => {
+                          const repIsPassive = ["fermentation", "ruhe", "kühlen"].includes(rep.type || "aktiv");
+                          const isSelected = mode === "passiv" ? repIsPassive : !repIsPassive;
+                          return (
+                            <button key={mode}
+                              onClick={() => setRepeat(st.id, rep.id, "type", mode === "passiv" ? "ruhe" : "aktiv")}
+                              style={{ ...S.scBtn, ...(isSelected ? S.scBtnAct : {}), fontSize: 11, padding: "3px 8px" }}
+                            >
+                              {label}
+                            </button>
+                          );
+                        })}
                       </div>
                       <input
                         value={rep.name}
