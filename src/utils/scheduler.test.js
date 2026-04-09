@@ -37,7 +37,7 @@ describe("expandSteps", () => {
       repeat: { id: "r1", name: "Ansetzen", duration: 10, count: 1, type: "aktiv", notes: "", position: "prefix" },
     };
     const result = expandSteps([step]);
-    expect(result[0]._active).toMatchObject({ repIdx: 1, repTotal: 1, parentName: "Starter füttern" });
+    expect(result[0]._active).toMatchObject({ parentName: "Starter füttern" });
   });
 
   test("prefix: totalDur counts active duration once", () => {
@@ -113,8 +113,7 @@ describe("expandSteps", () => {
     };
     const result = expandSteps([step]);
     const rests = result.filter(s => s._rest);
-    expect(rests[0]._rest).toMatchObject({ segIdx: 1, segTotal: 3, parentName: "Stockgare" });
-    expect(rests[2]._rest).toMatchObject({ segIdx: 3, segTotal: 3 });
+    rests.forEach(s => expect(s._rest).toMatchObject({ parentName: "Stockgare" }));
   });
 
   test("total expanded duration equals original duration + all repeat times", () => {
@@ -125,6 +124,64 @@ describe("expandSteps", () => {
     const result = expandSteps([step]);
     const totalMin = result.reduce((s, seg) => s + seg.duration, 0);
     expect(totalMin).toBe(300 + 4 * 5); // 320
+  });
+
+  // ── multiple sub-steps ───────────────────────────────────────────
+  test("multiple sub-steps: prefix + interleave produces correct segment order", () => {
+    // Backen (50 min) with 1) prefix Vorheizen (30 min), 2) interleave Dampf (2 min, count=1)
+    const step = {
+      ...makeStep("Backen", 50, "backen"),
+      repeats: [
+        { id: "pre1", name: "Vorheizen", duration: 30, count: 1, type: "aktiv", notes: "", position: "prefix" },
+        { id: "int1", name: "Dampf ablassen", duration: 2, count: 1, type: "aktiv", notes: "", position: "interleave" },
+      ],
+    };
+    const result = expandSteps([step]);
+    // prefix(30) + rest(25) + interleave(2) + rest(25) = 4 segments
+    expect(result).toHaveLength(4);
+    expect(result[0]._active).toBeDefined();
+    expect(result[0].duration).toBe(30); // Vorheizen
+    expect(result[1]._rest).toBeDefined();
+    expect(result[1].duration).toBe(25); // 50 / (1+1) = 25
+    expect(result[2]._active).toBeDefined();
+    expect(result[2].duration).toBe(2);  // Dampf
+    expect(result[3]._rest).toBeDefined();
+    expect(result[3].duration).toBe(25);
+  });
+
+  test("multiple sub-steps: total duration is correct", () => {
+    const step = {
+      ...makeStep("Backen", 50, "backen"),
+      repeats: [
+        { id: "pre1", name: "Vorheizen", duration: 30, count: 1, type: "aktiv", notes: "", position: "prefix" },
+        { id: "int1", name: "Dampf", duration: 2, count: 1, type: "aktiv", notes: "", position: "interleave" },
+      ],
+    };
+    const result = expandSteps([step]);
+    const total = result.reduce((s, seg) => s + seg.duration, 0);
+    expect(total).toBe(50 + 30 + 2); // 82
+  });
+
+  test("multiple sub-steps: two interleave splits accumulate correctly", () => {
+    // Step 60 min, interleave Falten (count=1, dur=5), then interleave Lüften (count=1, dur=3)
+    // After Falten: [30, Falten(5), 30]
+    // Lüften splits each 30-min rest block independently (active Falten passes through):
+    // → [15, Lüften(3), 15, Falten(5), 15, Lüften(3), 15]  total = 71
+    const step = {
+      ...makeStep("Gare", 60, "fermentation"),
+      repeats: [
+        { id: "a1", name: "Falten", duration: 5, count: 1, type: "aktiv", notes: "", position: "interleave" },
+        { id: "b1", name: "Lüften", duration: 3, count: 1, type: "aktiv", notes: "", position: "interleave" },
+      ],
+    };
+    const result = expandSteps([step]);
+    expect(result).toHaveLength(7); // 4 rest + Falten + 2 Lüften
+    const total = result.reduce((s, seg) => s + seg.duration, 0);
+    expect(total).toBe(60 + 5 + 3 * 2); // 71 — Lüften once per rest block
+    // All passive segments have _rest
+    result.filter(s => s._rest).forEach(s => expect(s._rest.parentName).toBe("Gare"));
+    // Active segments must not carry _rest
+    result.filter(s => s._active).forEach(s => expect(s._rest).toBeUndefined());
   });
 });
 

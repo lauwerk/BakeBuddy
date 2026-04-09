@@ -61,12 +61,9 @@ export const BakeSession = ({ recipe, schedule, onDone }) => {
           <div style={{ fontSize: 12, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600, marginBottom: 4, textAlign: "center" }}>
             {stepTypes[step.type]} {step._active ? "aktiv" : step.type}
           </div>
-          {/* Kontext: Teil von Stockgare (3/5) oder Wiederholung (2/4) */}
           {(step._rest || step._active) && (
             <div style={{ fontSize: 11, color: "var(--accent)", textAlign: "center", marginBottom: 4, fontFamily: "var(--font-mono)" }}>
-              {step._rest
-                ? `${step._rest.parentName} — Teil ${step._rest.segIdx}/${step._rest.segTotal}`
-                : `${step._active.parentName} — Wdh. ${step._active.repIdx}/${step._active.repTotal}`}
+              {(step._rest || step._active).parentName}
             </div>
           )}
           <h2 style={{ fontSize: 22, fontWeight: 700, margin: "0 0 8px", textAlign: "center" }}>{step.name}</h2>

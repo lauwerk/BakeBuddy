@@ -67,20 +67,31 @@ export const RecipeEditor = ({ recipe, onSave, onDelete, onBack, onDuplicate, on
     if (ni >= 0 && ni < r.steps.length) [r.steps[i], r.steps[ni]] = [r.steps[ni], r.steps[i]];
   });
 
-  const addRepeat = (id) => up(r => {
-    const s = r.steps.find(x => x.id === id);
-    if (s) s.repeat = { id: uid(), name: "Dehnen & Falten", duration: 5, count: 4, type: "aktiv", notes: "" };
+  // Normalisiert altes repeat-Format auf repeats-Array
+  const getRepeats = (step) => step.repeats || (step.repeat ? [step.repeat] : []);
+
+  const addRepeat = (stepId) => up(r => {
+    const s = r.steps.find(x => x.id === stepId);
+    if (!s) return;
+    if (!s.repeats) s.repeats = getRepeats(s).filter(() => true); // migriere ggf. altes Format
+    delete s.repeat;
+    s.repeats.push({ id: uid(), name: "", duration: 5, count: 4, type: "aktiv", notes: "", position: "interleave" });
   });
-  const rmRepeat = (id) => up(r => {
-    const s = r.steps.find(x => x.id === id);
-    if (s) delete s.repeat;
+  const rmRepeat = (stepId, repId) => up(r => {
+    const s = r.steps.find(x => x.id === stepId);
+    if (!s) return;
+    if (s.repeats) s.repeats = s.repeats.filter(rep => rep.id !== repId);
+    if (s.repeat?.id === repId) delete s.repeat;
   });
-  const setRepeat = (id, field, val) => up(r => {
-    const s = r.steps.find(x => x.id === id);
-    if (!s?.repeat) return;
-    s.repeat[field] = ["count", "duration"].includes(field) ? (Number(val) || 1) : val;
-    // Bei Wechsel auf prefix: count ist bedeutungslos, auf 1 setzen
-    if (field === "position" && val === "prefix") s.repeat.count = 1;
+  const setRepeat = (stepId, repId, field, val) => up(r => {
+    const s = r.steps.find(x => x.id === stepId);
+    if (!s) return;
+    // Altes Format ggf. migrieren
+    if (!s.repeats && s.repeat) { s.repeats = [s.repeat]; delete s.repeat; }
+    const rep = s.repeats?.find(x => x.id === repId);
+    if (!rep) return;
+    rep[field] = ["count", "duration"].includes(field) ? (Number(val) || 1) : val;
+    if (field === "position" && val === "prefix") rep.count = 1;
   });
 
   const addJ = () => {
@@ -277,10 +288,10 @@ export const RecipeEditor = ({ recipe, onSave, onDelete, onBack, onDuplicate, on
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <label style={{ color: "var(--muted)", width: 42 }}>
-                    {st.repeat ? "Passiv" : "Dauer"}
+                    {getRepeats(st).length > 0 ? "Passiv" : "Dauer"}
                   </label>
                   <input type="number" value={st.duration || ""} onChange={e => setStep(st.id, "duration", e.target.value)} style={{ ...S.numSm, width: 56 }} />
-                  <span style={{ color: "var(--muted)" }}>Min{!st.repeat && ` · ${fmtDur(st.duration || 0)}`}</span>
+                  <span style={{ color: "var(--muted)" }}>Min{!getRepeats(st).length && ` · ${fmtDur(st.duration || 0)}`}</span>
                 </div>
                 {(st.type === "fermentation" || st.type === "ruhe") && (
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -299,44 +310,39 @@ export const RecipeEditor = ({ recipe, onSave, onDelete, onBack, onDuplicate, on
                 </div>
                 <textarea value={st.notes} onChange={e => setStep(st.id, "notes", e.target.value)} placeholder="Notizen…" style={S.taSm} rows={2} />
 
-                {/* ── Sub-Schritt ── */}
+                {/* ── Sub-Schritte ── */}
                 <div style={{ marginTop: 4, paddingTop: 8, borderTop: "1px solid var(--border)" }}>
-                  {!st.repeat ? (
-                    <button onClick={() => addRepeat(st.id)} style={S.addSm}>
-                      🔄 Sub-Schritt einplanen
-                    </button>
-                  ) : (
-                    <div>
+                  {getRepeats(st).map((rep, repIdx) => (
+                    <div key={rep.id} style={{ background: "var(--surface2)", borderRadius: 8, padding: "8px 10px", marginBottom: 8 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--accent)" }}>🔄 Sub-Schritt</span>
-                        <button onClick={() => rmRepeat(st.id)} style={{ ...S.mini, color: "var(--danger)", fontSize: 11 }}>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--accent)" }}>Sub-Schritt {repIdx + 1}</span>
+                        <button onClick={() => rmRepeat(st.id, rep.id)} style={{ ...S.mini, color: "var(--danger)", fontSize: 11 }}>
                           Entfernen
                         </button>
                       </div>
-                      {/* Position-Toggle */}
                       <div style={{ display: "flex", gap: 4, marginBottom: 6 }}>
-                        {[["prefix", "▶ Vorab (einmalig)"], ["interleave", "🔄 Verteilt (mehrfach)"]].map(([val, label]) => (
+                        {[["prefix", "▶ Vorab"], ["interleave", "🔄 Verteilt"]].map(([val, label]) => (
                           <button key={val}
-                            onClick={() => setRepeat(st.id, "position", val)}
-                            style={{ ...S.scBtn, ...(( st.repeat.position || "interleave") === val ? S.scBtnAct : {}), fontSize: 11, padding: "3px 8px" }}
+                            onClick={() => setRepeat(st.id, rep.id, "position", val)}
+                            style={{ ...S.scBtn, ...((rep.position || "interleave") === val ? S.scBtnAct : {}), fontSize: 11, padding: "3px 8px" }}
                           >
                             {label}
                           </button>
                         ))}
                       </div>
                       <input
-                        value={st.repeat.name}
-                        onChange={e => setRepeat(st.id, "name", e.target.value)}
-                        placeholder="Name (z.B. Starter ansetzen)"
+                        value={rep.name}
+                        onChange={e => setRepeat(st.id, rep.id, "name", e.target.value)}
+                        placeholder="Name (z.B. Vorheizen)"
                         style={S.inIn}
                       />
                       <div style={{ display: "flex", gap: 8, marginTop: 6, alignItems: "center" }}>
-                        {(st.repeat.position || "interleave") === "interleave" && (
+                        {(rep.position || "interleave") === "interleave" && (
                           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                             <label style={{ color: "var(--muted)", fontSize: 11 }}>Anzahl</label>
                             <input
-                              type="number" min={1} value={st.repeat.count || ""}
-                              onChange={e => setRepeat(st.id, "count", e.target.value)}
+                              type="number" min={1} value={rep.count || ""}
+                              onChange={e => setRepeat(st.id, rep.id, "count", e.target.value)}
                               style={{ ...S.numSm, width: 46 }}
                             />
                             <span style={{ color: "var(--muted)", fontSize: 11 }}>×</span>
@@ -344,34 +350,26 @@ export const RecipeEditor = ({ recipe, onSave, onDelete, onBack, onDuplicate, on
                         )}
                         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                           <input
-                            type="number" min={1} value={st.repeat.duration || ""}
-                            onChange={e => setRepeat(st.id, "duration", e.target.value)}
+                            type="number" min={1} value={rep.duration || ""}
+                            onChange={e => setRepeat(st.id, rep.id, "duration", e.target.value)}
                             style={{ ...S.numSm, width: 46 }}
                           />
                           <span style={{ color: "var(--muted)", fontSize: 11 }}>Min</span>
                         </div>
                       </div>
-                      {/* Vorschau */}
-                      {st.repeat.duration > 0 && (
-                        <div style={{ marginTop: 6, fontSize: 11, color: "var(--muted)", background: "var(--surface2)", borderRadius: 6, padding: "5px 8px", lineHeight: 1.4 }}>
-                          {(() => {
-                            const isPrefix = (st.repeat.position || "interleave") === "prefix";
-                            const isPassive = ["fermentation", "ruhe", "kühlen"].includes(st.type);
-                            if (isPrefix) {
-                              const total = st.duration + st.repeat.duration;
-                              return `${st.repeat.duration} Min aktiv → ${st.duration} Min passiv = ${fmtDur(total)}`;
-                            }
-                            const total = st.duration + st.repeat.count * st.repeat.duration;
-                            if (isPassive) {
-                              const seg = Math.floor(st.duration / (st.repeat.count + 1));
-                              return `${st.repeat.count + 1} × ${seg} Min + ${st.repeat.count} × ${st.repeat.duration} Min = ${fmtDur(total)}`;
-                            }
-                            return `${st.duration} Min + ${st.repeat.count} × ${st.repeat.duration} Min = ${fmtDur(total)}`;
-                          })()}
+                      {rep.duration > 0 && (
+                        <div style={{ marginTop: 6, fontSize: 11, color: "var(--muted)", background: "var(--surface)", borderRadius: 6, padding: "5px 8px", lineHeight: 1.4 }}>
+                          {(rep.position || "interleave") === "prefix"
+                            ? `▶ ${rep.duration} Min aktiv → ${st.duration} Min passiv`
+                            : `🔄 ${rep.count}× ${rep.duration} Min verteilt · Pause ${Math.floor(st.duration / (rep.count + 1))} Min`
+                          }
                         </div>
                       )}
                     </div>
-                  )}
+                  ))}
+                  <button onClick={() => addRepeat(st.id)} style={S.addSm}>
+                    {ICO.plus(13)} Sub-Schritt hinzufügen
+                  </button>
                 </div>
               </div>
               <div style={{ display: "flex", gap: 4, justifyContent: "flex-end", marginTop: 4 }}>
