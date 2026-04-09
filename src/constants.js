@@ -27,6 +27,17 @@ export const typeLabels = {
   sonstiges: "📦 Sonstiges",
 };
 
+export const RATING_CATS = [
+  ["ovenSpring", "Oven Spring"],
+  ["krume",      "Krume"],
+  ["kruste",     "Kruste"],
+  ["farbe",      "Farbe"],
+  ["geruch",     "Geruch"],
+  ["geschmack",  "Geschmack"],
+];
+
+export const EMPTY_RATINGS = () => ({ ovenSpring: 0, krume: 0, kruste: 0, farbe: 0, geruch: 0, geschmack: 0 });
+
 export const SLOT_MS = 30 * 60 * 1000;
 
 export const uid = () => crypto.randomUUID();

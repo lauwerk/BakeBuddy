@@ -1,8 +1,8 @@
 import { useState, useMemo } from "react";
 import { S } from "../styles.js";
 import { ICO } from "./icons.jsx";
-import { uid, categories, stepTypes, ingredientTypeOrder, typeLabels } from "../constants.js";
-import { getTotalFlour, calcGrams, calcHydration, calcTotalWeight, totalDur } from "../utils/calculations.js";
+import { uid, categories, stepTypes, ingredientTypeOrder, typeLabels, RATING_CATS, EMPTY_RATINGS } from "../constants.js";
+import { getTotalFlour, calcGrams, calcHydration, calcTotalWeight, totalDur, calcEntryRating } from "../utils/calculations.js";
 import { fmtDur } from "../utils/formatters.js";
 
 export const RecipeEditor = ({ recipe, onSave, onDelete, onBack, onDuplicate, onPlan }) => {
@@ -10,7 +10,8 @@ export const RecipeEditor = ({ recipe, onSave, onDelete, onBack, onDuplicate, on
   const [sec, setSec] = useState("info");
   const [scale, setScale] = useState(1);
   const [jText, setJText] = useState("");
-  const [jRate, setJRate] = useState(0);
+  const [jRatings, setJRatings] = useState(EMPTY_RATINGS);
+  const [editingJId, setEditingJId] = useState(null);
 
   // Use structuredClone instead of JSON.parse/stringify for ~2× speed improvement
   const up = (fn) => setR(p => {
@@ -94,11 +95,26 @@ export const RecipeEditor = ({ recipe, onSave, onDelete, onBack, onDuplicate, on
     if (field === "position" && val === "prefix") rep.count = 1;
   });
 
+  const resetJForm = () => { setJText(""); setJRatings(EMPTY_RATINGS); setEditingJId(null); };
+
   const addJ = () => {
     if (!jText.trim()) return;
-    up(r => r.journal.push({ id: uid(), text: jText, rating: jRate, date: Date.now() }));
-    setJText("");
-    setJRate(0);
+    if (editingJId) {
+      up(r => {
+        const j = r.journal.find(x => x.id === editingJId);
+        if (j) { j.text = jText; j.ratings = { ...jRatings }; delete j.rating; }
+      });
+    } else {
+      up(r => r.journal.push({ id: uid(), text: jText, ratings: { ...jRatings }, date: Date.now() }));
+    }
+    resetJForm();
+  };
+
+  const editJ = (j) => {
+    setEditingJId(j.id);
+    setJText(j.text);
+    setJRatings(j.ratings ? { ...EMPTY_RATINGS(), ...j.ratings } : EMPTY_RATINGS());
+    setSec("tagebuch");
   };
 
   const secs = [["info", "Info"], ["zutaten", "Zutaten"], ["schritte", "Schritte"], ["tagebuch", "Tagebuch"]];
@@ -414,27 +430,66 @@ export const RecipeEditor = ({ recipe, onSave, onDelete, onBack, onDuplicate, on
       {sec === "tagebuch" && (
         <div style={S.col}>
           <div style={S.card}>
-            <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
-              {[1, 2, 3, 4, 5].map(n => (
-                <button key={n} onClick={() => setJRate(n)} style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontSize: 22 }}>
-                  {n <= jRate ? "★" : "☆"}
-                </button>
-              ))}
-            </div>
-            <textarea value={jText} onChange={e => setJText(e.target.value)} placeholder="Wie war das Ergebnis?" style={S.ta} rows={3} />
-            <button onClick={addJ} style={S.pri}>Eintrag speichern</button>
-          </div>
-          {r.journal.slice().reverse().map(j => (
-            <div key={j.id} style={{ ...S.card, marginTop: 8 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                <span style={{ color: "var(--accent)" }}>{"★".repeat(j.rating)}{"☆".repeat(5 - j.rating)}</span>
-                <span style={{ fontSize: 11, color: "var(--muted)" }}>
-                  {new Date(j.date).toLocaleDateString("de-DE", { weekday: "short", day: "numeric", month: "short" })}, {new Date(j.date).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}
-                </span>
+            {/* Durchschnitt */}
+            {(() => {
+              const vals = Object.values(jRatings).filter(v => v > 0);
+              const avg = vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : 0;
+              const stars = Math.round(avg);
+              return (
+                <div style={{ textAlign: "center", marginBottom: 10 }}>
+                  <span style={{ color: "var(--accent)", fontSize: 22 }}>{"★".repeat(stars)}{"☆".repeat(5 - stars)}</span>
+                  {avg > 0 && <span style={{ fontSize: 11, color: "var(--muted)", marginLeft: 6 }}>∅ {avg.toFixed(1)}</span>}
+                </div>
+              );
+            })()}
+            {/* Kategorie-Bewertungen */}
+            {RATING_CATS.map(([key, label]) => (
+              <div key={key} style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 5 }}>
+                <span style={{ width: 90, fontSize: 12, color: "var(--muted)" }}>{label}</span>
+                {[1, 2, 3, 4, 5].map(n => (
+                  <button key={n}
+                    onClick={() => setJRatings(p => ({ ...p, [key]: n === p[key] ? 0 : n }))}
+                    style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontSize: 19, padding: 0, lineHeight: 1 }}>
+                    {n <= jRatings[key] ? "★" : "☆"}
+                  </button>
+                ))}
               </div>
-              <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5 }}>{j.text}</p>
+            ))}
+            <textarea value={jText} onChange={e => setJText(e.target.value)} placeholder="Notizen zum Ergebnis…" style={{ ...S.ta, marginTop: 8 }} rows={3} />
+            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+              <button onClick={addJ} style={S.pri}>{editingJId ? "Änderungen speichern" : "Eintrag speichern"}</button>
+              {editingJId && <button onClick={resetJForm} style={S.sec}>Abbrechen</button>}
             </div>
-          ))}
+          </div>
+          {r.journal.slice().reverse().map(j => {
+            const avg = calcEntryRating(j);
+            const rats = j.ratings || {};
+            return (
+              <div key={j.id} style={{ ...S.card, marginTop: 8 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  <span style={{ color: "var(--accent)", fontSize: 16 }}>{"★".repeat(avg)}{"☆".repeat(5 - avg)}</span>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <span style={{ fontSize: 11, color: "var(--muted)" }}>
+                      {new Date(j.date).toLocaleDateString("de-DE", { day: "numeric", month: "short" })}
+                    </span>
+                    <button onClick={() => editJ(j)} style={{ ...S.mini, fontSize: 13 }} title="Bearbeiten">✏️</button>
+                  </div>
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "3px 14px", marginBottom: j.text ? 8 : 0 }}>
+                  {RATING_CATS.map(([key, label]) => {
+                    const val = rats[key] || 0;
+                    if (!val) return null;
+                    return (
+                      <span key={key} style={{ fontSize: 11, color: "var(--muted)" }}>
+                        {label}: <span style={{ color: "var(--accent)" }}>{"★".repeat(val)}{"☆".repeat(5 - val)}</span>
+                      </span>
+                    );
+                  })}
+                </div>
+                {j.text && <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5 }}>{j.text}</p>}
+              </div>
+            );
+          })}
           {!r.journal.length && <p style={S.mutedTxt}>Noch keine Einträge.</p>}
         </div>
       )}

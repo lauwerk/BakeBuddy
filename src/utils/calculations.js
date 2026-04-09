@@ -36,6 +36,21 @@ export const calcTotalWeight = (ings) => {
   return ings.reduce((s, i) => s + calcGrams(i, tf), 0);
 };
 
+// Durchschnittsbewertung eines Tagebucheintrags (unterstützt altes rating-Feld und neues ratings-Objekt)
+export const calcEntryRating = (entry) => {
+  if (entry.ratings) {
+    const vals = Object.values(entry.ratings).filter(v => v > 0);
+    return vals.length ? Math.round(vals.reduce((s, v) => s + v, 0) / vals.length) : 0;
+  }
+  return entry.rating || 0;
+};
+
+// Durchschnittsbewertung über alle Tagebucheinträge eines Rezepts (0 wenn leer)
+export const calcRecipeRating = (recipe) => {
+  if (!recipe.journal?.length) return 0;
+  return recipe.journal.reduce((s, j) => s + calcEntryRating(j), 0) / recipe.journal.length;
+};
+
 // Gesamtdauer inkl. aller Sub-Schritte (unterstützt repeat und repeats)
 export const totalDur = (steps) => steps.reduce((s, st) => {
   const repeats = st.repeats || (st.repeat ? [st.repeat] : []);
