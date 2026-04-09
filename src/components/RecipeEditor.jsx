@@ -298,60 +298,62 @@ export const RecipeEditor = ({ recipe, onSave, onDelete, onBack, onDuplicate, on
                 </div>
                 <textarea value={st.notes} onChange={e => setStep(st.id, "notes", e.target.value)} placeholder="Notizen…" style={S.taSm} rows={2} />
 
-                {/* ── Wiederholung ── */}
-                {(st.type === "fermentation" || st.type === "ruhe") && (
-                  <div style={{ marginTop: 4, paddingTop: 8, borderTop: "1px solid var(--border)" }}>
-                    {!st.repeat ? (
-                      <button onClick={() => addRepeat(st.id)} style={S.addSm}>
-                        🔄 Aktiven Sub-Schritt einplanen
-                      </button>
-                    ) : (
-                      <div>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--accent)" }}>🔄 Wiederholung (aktiv)</span>
-                          <button onClick={() => rmRepeat(st.id)} style={{ ...S.mini, color: "var(--danger)", fontSize: 11 }}>
-                            Entfernen
-                          </button>
-                        </div>
-                        <input
-                          value={st.repeat.name}
-                          onChange={e => setRepeat(st.id, "name", e.target.value)}
-                          placeholder="Name (z.B. Dehnen & Falten)"
-                          style={S.inIn}
-                        />
-                        <div style={{ display: "flex", gap: 8, marginTop: 6, alignItems: "center" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                            <label style={{ color: "var(--muted)", fontSize: 11 }}>Anzahl</label>
-                            <input
-                              type="number" min={1} value={st.repeat.count || ""}
-                              onChange={e => setRepeat(st.id, "count", e.target.value)}
-                              style={{ ...S.numSm, width: 46 }}
-                            />
-                            <span style={{ color: "var(--muted)", fontSize: 11 }}>×</span>
-                          </div>
-                          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                            <input
-                              type="number" min={1} value={st.repeat.duration || ""}
-                              onChange={e => setRepeat(st.id, "duration", e.target.value)}
-                              style={{ ...S.numSm, width: 46 }}
-                            />
-                            <span style={{ color: "var(--muted)", fontSize: 11 }}>Min</span>
-                          </div>
-                        </div>
-                        {/* Vorschau */}
-                        {st.repeat.count > 0 && st.repeat.duration > 0 && (
-                          <div style={{ marginTop: 6, fontSize: 11, color: "var(--muted)", background: "var(--surface2)", borderRadius: 6, padding: "5px 8px", lineHeight: 1.4 }}>
-                            {(() => {
-                              const seg = Math.floor(st.duration / (st.repeat.count + 1));
-                              const total = st.duration + st.repeat.count * st.repeat.duration;
-                              return `${st.repeat.count + 1} × ${seg} Min passiv + ${st.repeat.count} × ${st.repeat.duration} Min aktiv = ${fmtDur(total)}`;
-                            })()}
-                          </div>
-                        )}
+                {/* ── Sub-Schritt ── */}
+                <div style={{ marginTop: 4, paddingTop: 8, borderTop: "1px solid var(--border)" }}>
+                  {!st.repeat ? (
+                    <button onClick={() => addRepeat(st.id)} style={S.addSm}>
+                      🔄 Sub-Schritt einplanen
+                    </button>
+                  ) : (
+                    <div>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--accent)" }}>🔄 Sub-Schritt</span>
+                        <button onClick={() => rmRepeat(st.id)} style={{ ...S.mini, color: "var(--danger)", fontSize: 11 }}>
+                          Entfernen
+                        </button>
                       </div>
-                    )}
-                  </div>
-                )}
+                      <input
+                        value={st.repeat.name}
+                        onChange={e => setRepeat(st.id, "name", e.target.value)}
+                        placeholder="Name (z.B. Dehnen & Falten)"
+                        style={S.inIn}
+                      />
+                      <div style={{ display: "flex", gap: 8, marginTop: 6, alignItems: "center" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                          <label style={{ color: "var(--muted)", fontSize: 11 }}>Anzahl</label>
+                          <input
+                            type="number" min={1} value={st.repeat.count || ""}
+                            onChange={e => setRepeat(st.id, "count", e.target.value)}
+                            style={{ ...S.numSm, width: 46 }}
+                          />
+                          <span style={{ color: "var(--muted)", fontSize: 11 }}>×</span>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                          <input
+                            type="number" min={1} value={st.repeat.duration || ""}
+                            onChange={e => setRepeat(st.id, "duration", e.target.value)}
+                            style={{ ...S.numSm, width: 46 }}
+                          />
+                          <span style={{ color: "var(--muted)", fontSize: 11 }}>Min</span>
+                        </div>
+                      </div>
+                      {/* Vorschau */}
+                      {st.repeat.count > 0 && st.repeat.duration > 0 && (
+                        <div style={{ marginTop: 6, fontSize: 11, color: "var(--muted)", background: "var(--surface2)", borderRadius: 6, padding: "5px 8px", lineHeight: 1.4 }}>
+                          {(() => {
+                            const isPassive = ["fermentation", "ruhe", "kühlen"].includes(st.type);
+                            const total = st.duration + st.repeat.count * st.repeat.duration;
+                            if (isPassive) {
+                              const seg = Math.floor(st.duration / (st.repeat.count + 1));
+                              return `${st.repeat.count + 1} × ${seg} Min + ${st.repeat.count} × ${st.repeat.duration} Min = ${fmtDur(total)}`;
+                            }
+                            return `${st.duration} Min + ${st.repeat.count} × ${st.repeat.duration} Min = ${fmtDur(total)}`;
+                          })()}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
               <div style={{ display: "flex", gap: 4, justifyContent: "flex-end", marginTop: 4 }}>
                 <button onClick={() => mvStep(st.id, -1)} disabled={idx === 0} style={S.mini}>↑</button>
