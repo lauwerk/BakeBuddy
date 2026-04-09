@@ -4,6 +4,10 @@ import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
   base: "/BakeBuddy/",
+  test: {
+    environment: "node",
+    include: ["src/**/*.test.js"],
+  },
   plugins: [
     react(),
     VitePWA({
