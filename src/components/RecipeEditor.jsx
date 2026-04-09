@@ -67,6 +67,21 @@ export const RecipeEditor = ({ recipe, onSave, onDelete, onBack, onDuplicate, on
     if (ni >= 0 && ni < r.steps.length) [r.steps[i], r.steps[ni]] = [r.steps[ni], r.steps[i]];
   });
 
+  const addRepeat = (id) => up(r => {
+    const s = r.steps.find(x => x.id === id);
+    if (s) s.repeat = { id: uid(), name: "Dehnen & Falten", duration: 5, count: 4, type: "aktiv", notes: "" };
+  });
+  const rmRepeat = (id) => up(r => {
+    const s = r.steps.find(x => x.id === id);
+    if (s) delete s.repeat;
+  });
+  const setRepeat = (id, field, val) => up(r => {
+    const s = r.steps.find(x => x.id === id);
+    if (s?.repeat) s.repeat[field] = ["count", "duration"].includes(field)
+      ? (Number(val) || 1)
+      : val;
+  });
+
   const addJ = () => {
     if (!jText.trim()) return;
     up(r => r.journal.push({ id: uid(), text: jText, rating: jRate, date: Date.now() }));
@@ -255,11 +270,16 @@ export const RecipeEditor = ({ recipe, onSave, onDelete, onBack, onDuplicate, on
                   <select value={st.type} onChange={e => setStep(st.id, "type", e.target.value)} style={S.inSel}>
                     {Object.keys(stepTypes).map(t => <option key={t} value={t}>{stepTypes[t]} {t}</option>)}
                   </select>
+                  <span style={{ fontSize: 10, color: "var(--muted)", marginLeft: 2 }}>
+                    {["fermentation", "ruhe", "kühlen"].includes(st.type) ? "⏸ passiv" : "▶ aktiv"}
+                  </span>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <label style={{ color: "var(--muted)", width: 42 }}>Dauer</label>
+                  <label style={{ color: "var(--muted)", width: 42 }}>
+                    {st.repeat ? "Passiv" : "Dauer"}
+                  </label>
                   <input type="number" value={st.duration || ""} onChange={e => setStep(st.id, "duration", e.target.value)} style={{ ...S.numSm, width: 56 }} />
-                  <span style={{ color: "var(--muted)" }}>Min · {fmtDur(st.duration || 0)}</span>
+                  <span style={{ color: "var(--muted)" }}>Min{!st.repeat && ` · ${fmtDur(st.duration || 0)}`}</span>
                 </div>
                 {(st.type === "fermentation" || st.type === "ruhe") && (
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -277,6 +297,61 @@ export const RecipeEditor = ({ recipe, onSave, onDelete, onBack, onDuplicate, on
                   <span style={{ color: "var(--muted)" }}>°C</span>
                 </div>
                 <textarea value={st.notes} onChange={e => setStep(st.id, "notes", e.target.value)} placeholder="Notizen…" style={S.taSm} rows={2} />
+
+                {/* ── Wiederholung ── */}
+                {(st.type === "fermentation" || st.type === "ruhe") && (
+                  <div style={{ marginTop: 4, paddingTop: 8, borderTop: "1px solid var(--border)" }}>
+                    {!st.repeat ? (
+                      <button onClick={() => addRepeat(st.id)} style={S.addSm}>
+                        🔄 Aktiven Sub-Schritt einplanen
+                      </button>
+                    ) : (
+                      <div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--accent)" }}>🔄 Wiederholung (aktiv)</span>
+                          <button onClick={() => rmRepeat(st.id)} style={{ ...S.mini, color: "var(--danger)", fontSize: 11 }}>
+                            Entfernen
+                          </button>
+                        </div>
+                        <input
+                          value={st.repeat.name}
+                          onChange={e => setRepeat(st.id, "name", e.target.value)}
+                          placeholder="Name (z.B. Dehnen & Falten)"
+                          style={S.inIn}
+                        />
+                        <div style={{ display: "flex", gap: 8, marginTop: 6, alignItems: "center" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                            <label style={{ color: "var(--muted)", fontSize: 11 }}>Anzahl</label>
+                            <input
+                              type="number" min={1} value={st.repeat.count || ""}
+                              onChange={e => setRepeat(st.id, "count", e.target.value)}
+                              style={{ ...S.numSm, width: 46 }}
+                            />
+                            <span style={{ color: "var(--muted)", fontSize: 11 }}>×</span>
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                            <input
+                              type="number" min={1} value={st.repeat.duration || ""}
+                              onChange={e => setRepeat(st.id, "duration", e.target.value)}
+                              style={{ ...S.numSm, width: 46 }}
+                            />
+                            <span style={{ color: "var(--muted)", fontSize: 11 }}>Min</span>
+                          </div>
+                        </div>
+                        {/* Vorschau */}
+                        {st.repeat.count > 0 && st.repeat.duration > 0 && (
+                          <div style={{ marginTop: 6, fontSize: 11, color: "var(--muted)", background: "var(--surface2)", borderRadius: 6, padding: "5px 8px", lineHeight: 1.4 }}>
+                            {(() => {
+                              const seg = Math.floor(st.duration / (st.repeat.count + 1));
+                              const total = st.duration + st.repeat.count * st.repeat.duration;
+                              return `${st.repeat.count + 1} × ${seg} Min passiv + ${st.repeat.count} × ${st.repeat.duration} Min aktiv = ${fmtDur(total)}`;
+                            })()}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
               <div style={{ display: "flex", gap: 4, justifyContent: "flex-end", marginTop: 4 }}>
                 <button onClick={() => mvStep(st.id, -1)} disabled={idx === 0} style={S.mini}>↑</button>

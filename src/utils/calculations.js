@@ -36,4 +36,8 @@ export const calcTotalWeight = (ings) => {
   return ings.reduce((s, i) => s + calcGrams(i, tf), 0);
 };
 
-export const totalDur = (steps) => steps.reduce((s, st) => s + st.duration, 0);
+// Gesamtdauer inkl. aller Wiederholungen (aktive Sub-Schritte)
+export const totalDur = (steps) => steps.reduce((s, st) => {
+  const repeatTime = st.repeat ? st.repeat.count * st.repeat.duration : 0;
+  return s + st.duration + repeatTime;
+}, 0);

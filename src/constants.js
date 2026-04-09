@@ -46,8 +46,11 @@ export const defaultRecipe = () => ({
     { id: uid(), name: "Starter füttern", duration: 480, tempMin: 24, tempMax: 28, type: "fermentation", notes: "Starter 1:1:1 auffrischen" },
     { id: uid(), name: "Autolyse", duration: 60, tempMin: 22, tempMax: 26, type: "ruhe", notes: "Mehl + Wasser vermengen, abgedeckt ruhen" },
     { id: uid(), name: "Hauptteig kneten", duration: 15, tempMin: null, tempMax: null, type: "aktiv", notes: "Starter + Salz einarbeiten" },
-    { id: uid(), name: "Dehnen & Falten", duration: 10, tempMin: null, tempMax: null, type: "aktiv", notes: "4x im Abstand von 30 Min" },
-    { id: uid(), name: "Stockgare", duration: 300, tempMin: 22, tempMax: 28, type: "fermentation", notes: "Teig auf doppeltes Volumen", flexMin: 240, flexMax: 480 },
+    {
+      id: uid(), name: "Stockgare", duration: 300, tempMin: 22, tempMax: 28,
+      type: "fermentation", notes: "Teig auf doppeltes Volumen", flexMin: 240, flexMax: 480,
+      repeat: { id: uid(), name: "Dehnen & Falten", duration: 5, count: 4, type: "aktiv", notes: "Teig sanft dehnen und falten" },
+    },
     { id: uid(), name: "Formen", duration: 15, tempMin: null, tempMax: null, type: "aktiv", notes: "Rundwirken, in Gärkorb" },
     { id: uid(), name: "Stückgare", duration: 720, tempMin: 4, tempMax: 6, type: "fermentation", notes: "Kühlschrank, abgedeckt", flexMin: 600, flexMax: 960 },
     { id: uid(), name: "Backen", duration: 50, tempMin: 240, tempMax: 250, type: "backen", notes: "20 Min mit Dampf, dann ohne" },
