@@ -36,8 +36,10 @@ export const calcTotalWeight = (ings) => {
   return ings.reduce((s, i) => s + calcGrams(i, tf), 0);
 };
 
-// Gesamtdauer inkl. aller Wiederholungen (aktive Sub-Schritte)
+// Gesamtdauer inkl. aller Sub-Schritte
 export const totalDur = (steps) => steps.reduce((s, st) => {
-  const repeatTime = st.repeat ? st.repeat.count * st.repeat.duration : 0;
+  if (!st.repeat) return s + st.duration;
+  const isPrefix = (st.repeat.position || "interleave") === "prefix";
+  const repeatTime = isPrefix ? st.repeat.duration : st.repeat.count * st.repeat.duration;
   return s + st.duration + repeatTime;
 }, 0);

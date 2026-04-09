@@ -17,6 +17,40 @@ describe("expandSteps", () => {
     expect(expandSteps(steps)).toEqual(steps);
   });
 
+  // ── prefix mode ──────────────────────────────────────────────
+  test("prefix: expands to [active, passive]", () => {
+    const step = {
+      ...makeStep("Starter füttern", 480, "fermentation"),
+      repeat: { id: "r1", name: "Starter ansetzen", duration: 10, count: 1, type: "aktiv", notes: "", position: "prefix" },
+    };
+    const result = expandSteps([step]);
+    expect(result).toHaveLength(2);
+    expect(result[0]._active).toBeDefined();
+    expect(result[0].duration).toBe(10);
+    expect(result[1]._rest).toBeDefined();
+    expect(result[1].duration).toBe(480);
+  });
+
+  test("prefix: active segment has correct _active metadata", () => {
+    const step = {
+      ...makeStep("Starter füttern", 480, "fermentation"),
+      repeat: { id: "r1", name: "Ansetzen", duration: 10, count: 1, type: "aktiv", notes: "", position: "prefix" },
+    };
+    const result = expandSteps([step]);
+    expect(result[0]._active).toMatchObject({ repIdx: 1, repTotal: 1, parentName: "Starter füttern" });
+  });
+
+  test("prefix: totalDur counts active duration once", () => {
+    const steps = [{
+      ...makeStep("Starter füttern", 480, "fermentation"),
+      repeat: { id: "r1", name: "Ansetzen", duration: 10, count: 99, type: "aktiv", notes: "", position: "prefix" },
+    }];
+    // count is ignored for prefix — only 1 active occurrence
+    const expanded = expandSteps(steps);
+    const total = expanded.reduce((s, seg) => s + seg.duration, 0);
+    expect(total).toBe(490); // 10 + 480
+  });
+
   test("expands repeat into (count*2 + 1) segments", () => {
     const step = {
       ...makeStep("Stockgare", 300, "fermentation"),

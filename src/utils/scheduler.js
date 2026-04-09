@@ -1,8 +1,12 @@
 import { SLOT_MS } from "../constants.js";
 
-// Expandiert Schritte mit Wiederholungen in einzelne Segmente.
-// Beispiel: Stockgare (300 Min) + 4× Dehnen&Falten (5 Min)
-//   → Rest(60) → D&F(5) → Rest(60) → D&F(5) → Rest(60) → D&F(5) → Rest(60) → D&F(5) → Rest(60)
+// Expandiert Schritte mit Sub-Schritten in einzelne Segmente.
+//
+// position "interleave" (Standard):
+//   Stockgare(300) + 4× D&F(5) → Rest(60) → D&F → Rest(60) → D&F → … → Rest(60)
+//
+// position "prefix":
+//   Starter füttern(480) + einmalig Starter ansetzen(10) → Aktiv(10) → Passiv(480)
 export const expandSteps = (steps) => {
   const result = [];
   for (const step of steps) {
@@ -11,42 +15,63 @@ export const expandSteps = (steps) => {
       continue;
     }
     const { repeat } = step;
-    const count = repeat.count;
-    const segDur = Math.floor(step.duration / (count + 1));
-    // Letztes Segment bekommt evtl. 1 Min extra durch Rundungsdifferenz
-    const lastSegDur = step.duration - segDur * count;
+    const isPrefix = (repeat.position || "interleave") === "prefix";
 
-    for (let i = 0; i < count; i++) {
+    if (isPrefix) {
+      // Aktiver Sub-Schritt zuerst, danach der volle Passivschritt
       result.push({
-        ...step,
-        id: `${step.id}_p${i}`,
-        duration: segDur,
-        repeat: undefined,
-        flexMin: undefined,
-        flexMax: undefined,
-        _rest: { segIdx: i + 1, segTotal: count + 1, parentName: step.name },
-      });
-      result.push({
-        id: `${step.id}_a${i}`,
-        name: count > 1 ? `${repeat.name} (${i + 1}/${count})` : repeat.name,
+        id: `${step.id}_a0`,
+        name: repeat.name,
         duration: repeat.duration,
         type: repeat.type || "aktiv",
         notes: repeat.notes || "",
         tempMin: null,
         tempMax: null,
-        _active: { repIdx: i + 1, repTotal: count, parentName: step.name },
+        _active: { repIdx: 1, repTotal: 1, parentName: step.name },
+      });
+      result.push({
+        ...step,
+        id: `${step.id}_p0`,
+        repeat: undefined,
+        _rest: { segIdx: 1, segTotal: 1, parentName: step.name },
+      });
+    } else {
+      // Interleaved: Passiv → Aktiv → Passiv → … → Passiv
+      const count = repeat.count;
+      const segDur = Math.floor(step.duration / (count + 1));
+      const lastSegDur = step.duration - segDur * count;
+
+      for (let i = 0; i < count; i++) {
+        result.push({
+          ...step,
+          id: `${step.id}_p${i}`,
+          duration: segDur,
+          repeat: undefined,
+          flexMin: undefined,
+          flexMax: undefined,
+          _rest: { segIdx: i + 1, segTotal: count + 1, parentName: step.name },
+        });
+        result.push({
+          id: `${step.id}_a${i}`,
+          name: count > 1 ? `${repeat.name} (${i + 1}/${count})` : repeat.name,
+          duration: repeat.duration,
+          type: repeat.type || "aktiv",
+          notes: repeat.notes || "",
+          tempMin: null,
+          tempMax: null,
+          _active: { repIdx: i + 1, repTotal: count, parentName: step.name },
+        });
+      }
+      result.push({
+        ...step,
+        id: `${step.id}_p${count}`,
+        duration: lastSegDur,
+        repeat: undefined,
+        flexMin: undefined,
+        flexMax: undefined,
+        _rest: { segIdx: count + 1, segTotal: count + 1, parentName: step.name },
       });
     }
-    // Letztes Ruhe-Segment
-    result.push({
-      ...step,
-      id: `${step.id}_p${count}`,
-      duration: lastSegDur,
-      repeat: undefined,
-      flexMin: undefined,
-      flexMax: undefined,
-      _rest: { segIdx: count + 1, segTotal: count + 1, parentName: step.name },
-    });
   }
   return result;
 };
