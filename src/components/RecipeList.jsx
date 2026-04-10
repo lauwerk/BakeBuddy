@@ -4,7 +4,7 @@ import { ICO } from "./icons.jsx";
 import { getTotalFlour, calcHydration, calcTotalWeight, totalDur, calcRecipeRating } from "../utils/calculations.js";
 import { fmtDur } from "../utils/formatters.js";
 
-export const RecipeList = ({ recipes, onSelect, onCreate }) => {
+export const RecipeList = ({ recipes, onSelect, onCreate, onImportFromImage }) => {
   const [sortBy, setSortBy] = useState("newest");
   const [flourFilter, setFlourFilter] = useState(new Set());
 
@@ -35,6 +35,7 @@ export const RecipeList = ({ recipes, onSelect, onCreate }) => {
     <div style={S.page}>
       <div style={S.hdr}>
         <h1 style={S.title}>Meine Rezepte</h1>
+        <button onClick={onImportFromImage} style={S.iconBtn} title="Rezept aus Bild">📷</button>
         <button onClick={onCreate} style={S.iconBtn}>{ICO.plus(24)}</button>
       </div>
 

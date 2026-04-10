@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { S } from "../styles.js";
 import { ICO } from "./icons.jsx";
 import { loadGHConfig, saveGHConfig, clearGHConfig, ghPush, ghPull, ghTest } from "../utils/github.js";
+import { loadAnthropicKey, saveAnthropicKey, clearAnthropicKey } from "../utils/anthropic.js";
 
 export const Settings = ({ data, onImport, onExport }) => {
   const ref = useRef(null);
@@ -11,6 +12,10 @@ export const Settings = ({ data, onImport, onExport }) => {
   const [syncMsg, setSyncMsg] = useState("");
   const [showToken, setShowToken] = useState(false);
   const [testing, setTesting] = useState(false);
+
+  const [anthropicKey, setAnthropicKey] = useState(loadAnthropicKey);
+  const [anthropicInput, setAnthropicInput] = useState("");
+  const [showAnthropicKey, setShowAnthropicKey] = useState(false);
 
   const configureGH = async () => {
     if (!tokenInput.trim()) return;
@@ -86,9 +91,56 @@ export const Settings = ({ data, onImport, onExport }) => {
     e.target.value = "";
   };
 
+  const saveApiKey = () => {
+    const key = anthropicInput.trim();
+    if (!key) return;
+    saveAnthropicKey(key);
+    setAnthropicKey(key);
+    setAnthropicInput("");
+  };
+
   return (
     <div style={S.page}>
       <h1 style={S.title}>Daten & Sync</h1>
+
+      {/* Anthropic API Key */}
+      <div style={{ ...S.card, marginBottom: 10, borderColor: anthropicKey ? "var(--success)" : "var(--border)" }}>
+        <h3 style={S.cardT}>✨ KI-Rezepterkennung</h3>
+        {!anthropicKey ? (
+          <>
+            <p style={{ fontSize: 12, color: "var(--muted)", margin: "0 0 10px", lineHeight: 1.4 }}>
+              Mit einem <b style={{ color: "var(--text)" }}>Anthropic API-Key</b> kannst du Fotos von Rezepten hochladen
+              und automatisch in BakeBuddy-Rezepte umwandeln.
+            </p>
+            <label style={{ fontSize: 11, color: "var(--muted)", display: "block", marginBottom: 4 }}>API-Key</label>
+            <input
+              type={showAnthropicKey ? "text" : "password"}
+              value={anthropicInput}
+              onChange={e => setAnthropicInput(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && saveApiKey()}
+              placeholder="sk-ant-..."
+              style={{ ...S.inIn, fontFamily: "var(--font-mono)", fontSize: 12, marginBottom: 4 }}
+            />
+            <button onClick={() => setShowAnthropicKey(v => !v)} style={{ ...S.mini, fontSize: 11, color: "var(--accent)", marginBottom: 8 }}>
+              {showAnthropicKey ? "Verbergen" : "Anzeigen"}
+            </button>
+            <button onClick={saveApiKey} disabled={!anthropicInput.trim()} style={{ ...S.pri, opacity: !anthropicInput.trim() ? 0.5 : 1 }}>
+              Key speichern
+            </button>
+          </>
+        ) : (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--success)", flexShrink: 0 }} />
+              <span style={{ fontSize: 13 }}>API-Key hinterlegt</span>
+            </div>
+            <button onClick={() => { clearAnthropicKey(); setAnthropicKey(null); }}
+              style={{ background: "none", border: "none", color: "var(--danger)", fontSize: 12, cursor: "pointer", fontFamily: "var(--font)" }}>
+              Entfernen
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* GitHub Sync */}
       <div style={{ ...S.card, borderColor: ghCfg ? "var(--success)" : "var(--border)" }}>

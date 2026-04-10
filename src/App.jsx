@@ -6,6 +6,7 @@ import { RecipeEditor } from "./components/RecipeEditor.jsx";
 import { Planner } from "./components/Planner.jsx";
 import { BakeSession } from "./components/BakeSession.jsx";
 import { Settings } from "./components/Settings.jsx";
+import { RecipeImport } from "./components/RecipeImport.jsx";
 import { uid, defaultRecipe } from "./constants.js";
 import { load, save, exportJSON } from "./utils/persistence.js";
 import { loadGHConfig, ghPush } from "./utils/github.js";
@@ -31,6 +32,7 @@ export default function App() {
   const [data, setData] = useState(load);
   const [tab, setTab] = useState("recipes");
   const [editing, setEditing] = useState(null);
+  const [importing, setImporting] = useState(false);
   const [bake, setBake] = useState(null);
   const [syncIndicator, setSyncIndicator] = useState(null);
   const syncTimer = useRef(null);
@@ -96,6 +98,22 @@ export default function App() {
     );
   }
 
+  if (importing) {
+    return (
+      <div style={S.app}>
+        <SyncBadge status={syncIndicator} />
+        <RecipeImport
+          onBack={() => setImporting(false)}
+          onImport={r => {
+            upD(d => d.recipes.push(r));
+            setImporting(false);
+            setEditing(r.id);
+          }}
+        />
+      </div>
+    );
+  }
+
   if (editing) {
     const r = data.recipes.find(x => x.id === editing);
     if (!r) { setEditing(null); return null; }
@@ -118,7 +136,7 @@ export default function App() {
     <div style={S.app}>
       <SyncBadge status={syncIndicator} />
       {tab === "recipes" && (
-        <RecipeList recipes={data.recipes} onSelect={id => setEditing(id)} onCreate={create} />
+        <RecipeList recipes={data.recipes} onSelect={id => setEditing(id)} onCreate={create} onImportFromImage={() => setImporting(true)} />
       )}
       {tab === "planner" && (
         <Planner recipes={data.recipes} onBake={(r, s) => setBake({ r, s })} />
