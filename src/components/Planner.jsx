@@ -6,6 +6,7 @@ import { totalDur } from "../utils/calculations.js";
 import { fmtDur, fmtDT, fmtTime } from "../utils/formatters.js";
 import { scheduleSteps } from "../utils/scheduler.js";
 import { stepTypes } from "../constants.js";
+import { exportPlanPDF } from "../utils/pdf.js";
 
 export const Planner = ({ recipes, onBake }) => {
   const [selId, setSelId] = useState(null);
@@ -119,6 +120,9 @@ export const Planner = ({ recipes, onBake }) => {
               </div>
               <button onClick={() => onBake(recipe, sched)} style={{ ...S.pri, marginTop: 10 }}>
                 {ICO.play(18)} Backprozess starten
+              </button>
+              <button onClick={() => exportPlanPDF(recipe, sched)} style={{ ...S.sec, marginTop: 8 }}>
+                📄 Als PDF exportieren
               </button>
             </div>
           )}
