@@ -35,7 +35,7 @@ export const RecipeList = ({ recipes, onSelect, onCreate, onImportFromImage }) =
     <div style={S.page}>
       <div style={S.hdr}>
         <h1 style={S.title}>Meine Rezepte</h1>
-        <button onClick={onImportFromImage} style={S.iconBtn} title="Rezept aus Bild">📷</button>
+        {/* 📷 KI-Rezepterkennung: deaktiviert — onImportFromImage={() => ...} */}
         <button onClick={onCreate} style={S.iconBtn}>{ICO.plus(24)}</button>
       </div>
 

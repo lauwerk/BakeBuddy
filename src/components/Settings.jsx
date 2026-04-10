@@ -114,8 +114,8 @@ export const Settings = ({ data, onImport, onExport }) => {
     <div style={S.page}>
       <h1 style={S.title}>Daten & Sync</h1>
 
-      {/* Anthropic API Key */}
-      <div style={{ ...S.card, marginBottom: 10, borderColor: anthropicKey ? "var(--success)" : "var(--border)" }}>
+      {/* KI-Rezepterkennung: deaktiviert — Card vorhanden, aber nicht gerendert */}
+      {false && <div style={{ ...S.card, marginBottom: 10, borderColor: anthropicKey ? "var(--success)" : "var(--border)" }}>
         <h3 style={S.cardT}>✨ KI-Rezepterkennung</h3>
         {!anthropicKey ? (
           <>
@@ -191,7 +191,7 @@ export const Settings = ({ data, onImport, onExport }) => {
             </div>
           </>
         )}
-      </div>
+      </div>}
 
       {/* GitHub Sync */}
       <div style={{ ...S.card, borderColor: ghCfg ? "var(--success)" : "var(--border)" }}>

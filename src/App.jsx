@@ -98,21 +98,8 @@ export default function App() {
     );
   }
 
-  if (importing) {
-    return (
-      <div style={S.app}>
-        <SyncBadge status={syncIndicator} />
-        <RecipeImport
-          onBack={() => setImporting(false)}
-          onImport={r => {
-            upD(d => d.recipes.push(r));
-            setImporting(false);
-            setEditing(r.id);
-          }}
-        />
-      </div>
-    );
-  }
+  // KI-Rezepterkennung: deaktiviert (importing state + RecipeImport vorhanden, aber nicht aktiv)
+  // if (importing) { ... }
 
   if (editing) {
     const r = data.recipes.find(x => x.id === editing);
