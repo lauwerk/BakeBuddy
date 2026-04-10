@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { S } from "../styles.js";
 import { ICO } from "./icons.jsx";
 import { loadGHConfig, saveGHConfig, clearGHConfig, ghPush, ghPull, ghTest } from "../utils/github.js";
-import { loadAnthropicKey, saveAnthropicKey, clearAnthropicKey } from "../utils/anthropic.js";
+import { loadAnthropicKey, saveAnthropicKey, clearAnthropicKey, loadBudget, saveBudget, usageStatus } from "../utils/anthropic.js";
 
 export const Settings = ({ data, onImport, onExport }) => {
   const ref = useRef(null);
@@ -16,6 +16,9 @@ export const Settings = ({ data, onImport, onExport }) => {
   const [anthropicKey, setAnthropicKey] = useState(loadAnthropicKey);
   const [anthropicInput, setAnthropicInput] = useState("");
   const [showAnthropicKey, setShowAnthropicKey] = useState(false);
+  const [budget, setBudget] = useState(loadBudget);
+  const [budgetInput, setBudgetInput] = useState("");
+  const [aiUsage] = useState(usageStatus);
 
   const configureGH = async () => {
     if (!tokenInput.trim()) return;
@@ -99,6 +102,14 @@ export const Settings = ({ data, onImport, onExport }) => {
     setAnthropicInput("");
   };
 
+  const applyBudget = () => {
+    const val = Number(budgetInput);
+    if (!val || val < 1000) return;
+    saveBudget(val);
+    setBudget(val);
+    setBudgetInput("");
+  };
+
   return (
     <div style={S.page}>
       <h1 style={S.title}>Daten & Sync</h1>
@@ -129,16 +140,56 @@ export const Settings = ({ data, onImport, onExport }) => {
             </button>
           </>
         ) : (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--success)", flexShrink: 0 }} />
-              <span style={{ fontSize: 13 }}>API-Key hinterlegt</span>
+          <>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--success)", flexShrink: 0 }} />
+                <span style={{ fontSize: 13 }}>API-Key hinterlegt</span>
+              </div>
+              <button onClick={() => { clearAnthropicKey(); setAnthropicKey(null); }}
+                style={{ background: "none", border: "none", color: "var(--danger)", fontSize: 12, cursor: "pointer", fontFamily: "var(--font)" }}>
+                Entfernen
+              </button>
             </div>
-            <button onClick={() => { clearAnthropicKey(); setAnthropicKey(null); }}
-              style={{ background: "none", border: "none", color: "var(--danger)", fontSize: 12, cursor: "pointer", fontFamily: "var(--font)" }}>
-              Entfernen
-            </button>
-          </div>
+
+            {/* Usage meter */}
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                <span style={{ fontSize: 12, color: "var(--muted)" }}>Verbrauch diesen Monat</span>
+                <span style={{ fontSize: 12, fontFamily: "var(--font-mono)", color: aiUsage.blocked ? "var(--danger)" : aiUsage.warn ? "#e8a838" : "var(--text)" }}>
+                  {aiUsage.used.toLocaleString("de")} / {budget.toLocaleString("de")} Tokens
+                </span>
+              </div>
+              <div style={{ height: 8, background: "var(--surface2)", borderRadius: 4, overflow: "hidden" }}>
+                <div style={{
+                  height: "100%", borderRadius: 4, transition: "width 0.4s",
+                  width: `${Math.min(aiUsage.pct, 100)}%`,
+                  background: aiUsage.blocked ? "var(--danger)" : aiUsage.warn ? "#e8a838" : "var(--success)",
+                }} />
+              </div>
+              <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>
+                {aiUsage.blocked
+                  ? "⛔ Limit erreicht — Analyse pausiert bis nächsten Monat"
+                  : aiUsage.warn
+                  ? `⚠️ ${Math.round(aiUsage.pct)}% verbraucht — noch ca. ${Math.floor((budget - aiUsage.used) / 2500)} Analysen`
+                  : `ca. ${Math.floor((budget - aiUsage.used) / 2500)} Analysen verbleibend`}
+              </div>
+            </div>
+
+            {/* Budget setting */}
+            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              <label style={{ fontSize: 12, color: "var(--muted)", whiteSpace: "nowrap" }}>Monatslimit</label>
+              <input
+                type="number" min={1000} step={5000}
+                value={budgetInput || budget}
+                onChange={e => setBudgetInput(e.target.value)}
+                onBlur={applyBudget}
+                onKeyDown={e => e.key === "Enter" && applyBudget()}
+                style={{ ...S.numSm, width: 80 }}
+              />
+              <span style={{ fontSize: 12, color: "var(--muted)" }}>Tokens/Monat</span>
+            </div>
+          </>
         )}
       </div>
 

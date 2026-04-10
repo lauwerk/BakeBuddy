@@ -1,21 +1,64 @@
-const STORAGE_KEY = "bakebuddy-anthropic-key";
+const KEY_APIKEY  = "bakebuddy-anthropic-key";
+const KEY_USAGE   = "bakebuddy-anthropic-usage";
+const KEY_BUDGET  = "bakebuddy-anthropic-budget";
 
+const DEFAULT_BUDGET = 50_000; // tokens per month
+
+// ── API key ──────────────────────────────────────────────────────────
 export const loadAnthropicKey = () => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) return stored;
-  } catch {}
+  try { const s = localStorage.getItem(KEY_APIKEY); if (s) return s; } catch {}
   return import.meta.env.VITE_ANTHROPIC_KEY || null;
 };
-
 export const saveAnthropicKey = (key) => {
-  try { localStorage.setItem(STORAGE_KEY, key); } catch {}
+  try { localStorage.setItem(KEY_APIKEY, key); } catch {}
 };
-
 export const clearAnthropicKey = () => {
-  try { localStorage.removeItem(STORAGE_KEY); } catch {}
+  try { localStorage.removeItem(KEY_APIKEY); } catch {}
 };
 
+// ── Monthly budget ────────────────────────────────────────────────────
+export const loadBudget = () => {
+  try { return Number(localStorage.getItem(KEY_BUDGET)) || DEFAULT_BUDGET; } catch {}
+  return DEFAULT_BUDGET;
+};
+export const saveBudget = (tokens) => {
+  try { localStorage.setItem(KEY_BUDGET, String(tokens)); } catch {}
+};
+
+// ── Monthly usage tracking ────────────────────────────────────────────
+const monthKey = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${d.getMonth()}`;
+};
+
+export const getMonthlyUsage = () => {
+  try {
+    const stored = JSON.parse(localStorage.getItem(KEY_USAGE) || "{}");
+    return stored[monthKey()] || 0;
+  } catch { return 0; }
+};
+
+const recordUsage = (tokens) => {
+  try {
+    const stored = JSON.parse(localStorage.getItem(KEY_USAGE) || "{}");
+    const mk = monthKey();
+    stored[mk] = (stored[mk] || 0) + tokens;
+    // Keep at most 3 months
+    const keys = Object.keys(stored).sort();
+    if (keys.length > 3) delete stored[keys[0]];
+    localStorage.setItem(KEY_USAGE, JSON.stringify(stored));
+  } catch {}
+};
+
+// Returns { used, budget, pct, warn (≥70%), blocked (≥100%) }
+export const usageStatus = () => {
+  const used   = getMonthlyUsage();
+  const budget = loadBudget();
+  const pct    = budget > 0 ? (used / budget) * 100 : 0;
+  return { used, budget, pct, warn: pct >= 70, blocked: pct >= 100 };
+};
+
+// ── API call ──────────────────────────────────────────────────────────
 const PROMPT = `Du bist ein Experte für Brotbacken und Backen. Analysiere das Bild und extrahiere das Rezept als JSON.
 
 Gib NUR das JSON-Objekt zurück — kein Text, keine Erklärung, kein Markdown.
@@ -63,7 +106,7 @@ export const analyzeRecipeImage = async (apiKey, base64, mimeType) => {
     },
     body: JSON.stringify({
       model: "claude-opus-4-6",
-      max_tokens: 4096,
+      max_tokens: 2048,
       messages: [{
         role: "user",
         content: [
@@ -83,6 +126,11 @@ export const analyzeRecipeImage = async (apiKey, base64, mimeType) => {
   }
 
   const data = await res.json();
+
+  // Track token usage from response
+  const tokensUsed = (data.usage?.input_tokens || 0) + (data.usage?.output_tokens || 0);
+  if (tokensUsed > 0) recordUsage(tokensUsed);
+
   const text = data.content?.[0]?.text || "";
   const match = text.match(/\{[\s\S]*\}/);
   if (!match) throw new Error("Keine JSON-Antwort erhalten. Bitte erneut versuchen.");
