@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pizza-Entscheidung · objektiv und subjektiv</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --soot:#14110F; --panel:#1D1917; --line:#332C27;
+    --chalk:#EAE3D8; --muted:#8D8279; --ash:#C7BDB0;
+    --flame:#4FA8FF; --flame-dim:#2A6FB0;   /* objektiv: Propanflamme */
+    --ember:#FF7A3D; --ember-dim:#B8511F;   /* subjektiv: Glut */
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--soot);color:var(--chalk);font-family:'Archivo',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+       font-size:15px;line-height:1.5;padding:20px 16px 60px}
+  .wrap{max-width:900px;margin:0 auto}
+  .mono{font-family:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace}
+
+  /* Export */
+  .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:16px 0 4px}
+  .btn{background:transparent;border:1px solid var(--flame-dim);color:var(--flame);
+       font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;letter-spacing:.1em;
+       text-transform:uppercase;padding:10px 16px;border-radius:4px;cursor:pointer}
+  .btn:hover{background:var(--flame-dim);color:#08121C}
+  .btn:focus-visible{outline:2px solid var(--flame);outline-offset:2px}
+  .btn.ghost{border-color:var(--line);color:var(--ash)}
+  .btn.ghost:hover{background:var(--line);color:var(--chalk)}
+  .toolhint{font-size:12px;color:var(--muted);font-family:'JetBrains Mono',ui-monospace,monospace}
+  .toolhint.ok{color:var(--flame)}
+  .toolhint.warn{color:var(--ember)}
+  #stamp:empty{display:none}
+
+  header{border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:8px}
+  .eyebrow{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.18em;
+           text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+  h1{font-size:clamp(26px,6.5vw,42px);font-weight:800;letter-spacing:-.025em;line-height:1.03;
+     margin:0 0 10px;text-transform:uppercase}
+  h1 .b{color:var(--flame)} h1 .o{color:var(--ember)}
+  .sub{color:var(--muted);font-size:14px;margin:0;max-width:58ch}
+
+  .part{margin-top:38px;padding-top:8px}
+  .partlabel{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.2em;
+             text-transform:uppercase;padding:4px 9px;border-radius:3px;display:inline-block}
+  .partlabel.obj{background:var(--flame-dim);color:#08121C}
+  .partlabel.sub{background:var(--ember-dim);color:#1A0A03}
+  .partlabel.br{background:var(--ash);color:#14110F}
+  .parttitle{font-size:22px;font-weight:800;letter-spacing:-.02em;margin:10px 0 4px}
+  .partnote{color:var(--muted);font-size:13px;margin:0 0 18px;max-width:60ch}
+
+  h2{font-size:11px;font-family:'JetBrains Mono',monospace;letter-spacing:.16em;text-transform:uppercase;
+     color:var(--muted);font-weight:400;margin:26px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+
+  .grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(205px,1fr))}
+  .field label{display:block;font-size:13px;color:var(--ash);margin-bottom:5px}
+  .field .val{font-family:'JetBrains Mono',monospace;float:right;color:var(--flame)}
+  .field.warm .val{color:var(--ember)}
+  input[type=range]{width:100%;accent-color:var(--flame);margin:0}
+  .field.warm input[type=range]{accent-color:var(--ember)}
+  input[type=number]{width:100%;background:var(--panel);border:1px solid var(--line);color:var(--chalk);
+     font-family:'JetBrains Mono',monospace;font-size:15px;padding:8px 10px;border-radius:4px}
+  input:focus-visible{outline:2px solid var(--flame);outline-offset:2px}
+
+  .cards{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(235px,1fr))}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:16px}
+  .card.hero{border-color:var(--flame-dim)}
+  .card h3{margin:0 0 2px;font-size:16px;font-weight:800;letter-spacing:-.01em}
+  .card .meta{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:14px}
+  .big{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:29px;line-height:1;letter-spacing:-.03em;color:var(--flame)}
+  .big small{font-size:13px;font-weight:400;color:var(--muted);letter-spacing:0}
+  .rowline{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:5px 0;border-top:1px solid var(--line)}
+  .rowline:first-of-type{margin-top:14px}
+  .rowline span:last-child{font-family:'JetBrains Mono',monospace;color:var(--ash)}
+  .tank{margin-top:14px}
+  .tank .cap{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+  .tank .bar{height:8px;background:#0E0C0B;border:1px solid var(--line);border-radius:4px;overflow:hidden;margin-top:5px}
+  .tank .fill{height:100%;background:linear-gradient(90deg,var(--flame-dim),var(--flame));transition:width .35s ease}
+
+  figure{margin:0}
+  svg{width:100%;height:auto;display:block}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:10px;font-size:12px;color:var(--ash)}
+  .legend i{display:inline-block;width:14px;height:3px;vertical-align:middle;margin-right:6px;border-radius:2px}
+
+  /* Nutzwert-Matrix */
+  .matrix{width:100%;border-collapse:collapse;font-size:13px}
+  .matrix th{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;
+             color:var(--muted);font-weight:400;text-align:center;padding:0 4px 8px;vertical-align:bottom}
+  .matrix th.crit{text-align:left;width:38%}
+  .matrix td{border-top:1px solid var(--line);padding:7px 4px;vertical-align:middle}
+  .matrix td.crit{color:var(--ash);line-height:1.25}
+  .matrix td.crit b{display:block;color:var(--chalk);font-weight:600}
+  .matrix td.crit .w{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ember)}
+  .matrix input[type=number]{width:52px;text-align:center;padding:5px 2px;font-size:14px;margin:0 auto;display:block}
+  .matrix .neg b::after{content:' ▾';color:var(--muted);font-size:11px}
+
+  .barchart{margin-top:6px}
+  .brow{display:grid;grid-template-columns:1fr;gap:4px;margin-bottom:14px}
+  .brow .lbl{display:flex;justify-content:space-between;font-size:13px}
+  .brow .lbl b{font-weight:600}
+  .brow .lbl span{font-family:'JetBrains Mono',monospace;color:var(--ember)}
+  .brow .track{height:14px;background:#0E0C0B;border:1px solid var(--line);border-radius:3px;overflow:hidden}
+  .brow .fill{height:100%;background:linear-gradient(90deg,var(--ember-dim),var(--ember));transition:width .35s ease}
+  .brow.dim .fill{background:#4A423C}
+
+  .verdict{background:var(--panel);border-left:3px solid var(--ember);padding:14px 16px;border-radius:0 6px 6px 0;margin-top:18px;font-size:14px}
+  .verdict strong{color:var(--ember)}
+  .verdict.cool{border-left-color:var(--flame)} .verdict.cool strong{color:var(--flame)}
+
+  .bridge{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(235px,1fr));margin-top:4px}
+  .bcard{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:16px}
+  .bcard .k{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+  .bcard .n{font-family:'JetBrains Mono',monospace;font-size:27px;font-weight:700;letter-spacing:-.03em;margin:6px 0 4px}
+  .bcard .d{font-size:13px;color:var(--ash);line-height:1.35}
+
+  footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:12px}
+  footer li{margin-bottom:5px}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+  @media (max-width:520px){.matrix th{font-size:9px}.matrix input[type=number]{width:42px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <p class="eyebrow">Ooni Koda 2 Pro · Koda 2 Max · Napoleon Rogue 425 · Lieferdienst</p>
+  <h1>Was es <span class="b">kostet</span>.<br>Was es dir <span class="o">wert ist</span>.</h1>
+  <p class="sub">Zwei getrennte Bewertungen, die sich nicht vermischen — und eine dritte, die den Preis pro zusätzlichem Nutzwertpunkt ausrechnet.</p>
+  <div class="toolbar">
+    <span class="toolhint" id="saveState">Wird geladen …</span>
+    <button class="btn ghost" id="btnReset" type="button">Auf Ausgangswerte zurücksetzen</button>
+  </div>
+</header>
+
+<!-- ========== TEIL 1 ========== -->
+<section class="part">
+  <span class="partlabel obj">Bewertung 1</span>
+  <p class="parttitle">Objektiv, in Euro</p>
+  <p class="partnote">Vollkosten pro Session: Zutaten plus Gas. Alle Annahmen veränderbar.</p>
+
+  <h2>Grunddaten</h2>
+  <div class="grid">
+    <div class="field"><label>Pizzen pro Session <span class="val" id="v_pz">2</span></label><input type="range" id="pz" min="1" max="8" step="1" value="2"></div>
+    <div class="field"><label>Bestellpizza <span class="val" id="v_liefer">14,00 €</span></label><input type="range" id="liefer" min="8" max="22" step="0.5" value="14"></div>
+    <div class="field"><label>Zutaten pro Pizza <span class="val" id="v_zut">7,00 €</span></label><input type="range" id="zut" min="2" max="12" step="0.25" value="7"></div>
+    <div class="field"><label>11-kg-Propanflasche <span class="val" id="v_gas">29,50 €</span></label><input type="range" id="gas" min="18" max="45" step="0.5" value="29.5"></div>
+  </div>
+
+  <h2>Betrieb pro Session</h2>
+  <div class="grid">
+    <div class="field"><label>Napoleon: Aufheizen <span class="val" id="v_nA">30 min</span></label><input type="range" id="nA" min="10" max="60" step="5" value="30"></div>
+    <div class="field"><label>Napoleon: Backen <span class="val" id="v_nB">20 min</span></label><input type="range" id="nB" min="5" max="60" step="5" value="20"></div>
+    <div class="field"><label>Napoleon: Regler <span class="val" id="v_nR">90 %</span></label><input type="range" id="nR" min="30" max="100" step="5" value="90"></div>
+    <div class="field"><label>Ooni: Aufheizen <span class="val" id="v_oA">20 min</span></label><input type="range" id="oA" min="10" max="45" step="5" value="20"></div>
+    <div class="field"><label>Ooni: Backen <span class="val" id="v_oB">10 min</span></label><input type="range" id="oB" min="3" max="45" step="1" value="10"></div>
+    <div class="field"><label>Ooni: Regler <span class="val" id="v_oR">75 %</span></label><input type="range" id="oR" min="30" max="100" step="5" value="75"></div>
+  </div>
+
+  <h2>Anschaffung und Nutzung</h2>
+  <div class="grid">
+    <div class="field"><label>Ooni Koda 2 Pro (€)</label><input type="number" id="pPro" value="609" min="0" step="10"></div>
+    <div class="field"><label>Ooni Koda 2 Max (€)</label><input type="number" id="pMax" value="839" min="0" step="10"></div>
+    <div class="field"><label>Napoleon (€, bereits da)</label><input type="number" id="pNap" value="0" min="0" step="10"></div>
+    <div class="field"><label>Sessions pro Monat <span class="val" id="v_freq">4</span></label><input type="range" id="freq" min="1" max="12" step="1" value="4"></div>
+    <div class="field"><label>Nutzungshorizont <span class="val" id="v_jahre">5 Jahre</span></label><input type="range" id="jahre" min="2" max="12" step="1" value="5"></div>
+  </div>
+
+  <h2>Kosten pro Session</h2>
+  <div class="cards" id="cards"></div>
+
+  <h2>Kumulierte Kosten</h2>
+  <figure>
+    <svg id="chart" viewBox="0 0 700 330" role="img" aria-label="Kumulierte Kosten über die Anzahl der Sessions"></svg>
+    <div class="legend">
+      <span><i style="background:#8D8279"></i>Lieferdienst</span>
+      <span><i style="background:#FF7A3D"></i>Napoleon</span>
+      <span><i style="background:#4FA8FF"></i>Koda 2 Pro</span>
+      <span><i style="background:#2A6FB0"></i>Koda 2 Max</span>
+    </div>
+  </figure>
+  <div class="verdict cool" id="verdictObj"></div>
+</section>
+
+<!-- ========== TEIL 2 ========== -->
+<section class="part">
+  <span class="partlabel sub">Bewertung 2</span>
+  <p class="parttitle">Subjektiv, in Nutzwert</p>
+  <p class="partnote">Gewichte nach deiner Rangfolge vorbelegt: Prozesskontrolle vor Ritual vor Backergebnis. Reibung zählt negativ. Punkte 0–10, alles überschreibbar.</p>
+
+  <h2>Kriterien, Gewicht und Punkte</h2>
+  <table class="matrix">
+    <thead><tr>
+      <th class="crit">Kriterium · Gewicht</th>
+      <th>Liefer&shy;dienst</th><th>Napoleon</th><th>Koda 2 Pro</th><th>Koda 2 Max</th>
+    </tr></thead>
+    <tbody id="matrixBody"></tbody>
+  </table>
+
+  <h2>Gewichtung anpassen</h2>
+  <div class="grid" id="weightGrid"></div>
+
+  <h2>Nutzwert gesamt</h2>
+  <div class="barchart" id="bars"></div>
+  <div class="verdict" id="verdictSub"></div>
+</section>
+
+<!-- ========== TEIL 3 ========== -->
+<section class="part">
+  <span class="partlabel br">Bewertung 3</span>
+  <p class="parttitle">Die Brücke</p>
+  <p class="partnote">Nicht „rechnet sich das“, sondern: was müsste dir der Unterschied wert sein, damit es aufgeht. Referenz ist der Napoleon, den du schon hast.</p>
+  <div class="bridge" id="bridge"></div>
+  <div class="verdict" id="verdictBridge"></div>
+</section>
+
+<footer>
+  <ul>
+    <li>Napoleon Rogue 425: 14,25 kW Hauptbrenner. Ooni Koda 2 Pro: 9,7 kW / 690 g/h. Ooni Koda 2 Max: 10,5 kW / 750 g/h — Herstellerangaben.</li>
+    <li>Napoleon-Verbrauch aus der Brennerleistung abgeleitet mit 14,0 kWh/kg Propan — dieselbe Umrechnung, die Oonis eigene g/h-Werte ergibt.</li>
+    <li>Reglerstellung linear auf den Gasdurchsatz umgelegt; reale Ventile sind nicht linear. Aufheizen immer 100 %.</li>
+    <li>Nutzwertpunkte sind meine Ersteinschätzung, keine Messwerte. Sie sind der Teil, den du überschreiben solltest, wenn du anderer Meinung bist.</li>
+    <li>Zubehör (Schieber, IR-Thermometer, Abdeckung, Pizzastein für den Grill) ist in keiner Rechnung enthalten.</li>
+  </ul>
+</footer>
+
+</div>
+
+<script>
+const KWH_PER_KG = 14.0;
+
+const DEV = [
+  {key:'liefer', name:'Lieferdienst',      meta:'Pizzeria, 14 € pro Stück', kw:0,     color:'#8D8279', priceId:null,   virtual:true},
+  {key:'nap',    name:'Napoleon Rogue 425',meta:'14,25 kW · schon vorhanden', kw:14.25, color:'#FF7A3D', priceId:'pNap', heatId:'nA', bakeId:'nB', thrId:'nR'},
+  {key:'pro',    name:'Ooni Koda 2 Pro',   meta:'9,7 kW · 690 g/h',           kw:9.7,   color:'#4FA8FF', priceId:'pPro', heatId:'oA', bakeId:'oB', thrId:'oR', hero:true},
+  {key:'max',    name:'Ooni Koda 2 Max',   meta:'10,5 kW · 750 g/h',          kw:10.5,  color:'#2A6FB0', priceId:'pMax', heatId:'oA', bakeId:'oB', thrId:'oR'}
+];
+
+// Gewichte nach der Rangfolge; Punkte 0-10 je Option
+const CRIT = [
+  {id:'proz', name:'Handwerk & Prozesskontrolle', note:'Regelbarkeit, Messtechnik, reproduzierbares Ergebnis', w:10, neg:false, s:{liefer:0, nap:6, pro:9, max:9}},
+  {id:'ritual', name:'Familienritual & Spektakel', note:'offene Flamme, 90 Sekunden, alle stehen drumherum', w:8, neg:false, s:{liefer:2, nap:6, pro:9, max:10}},
+  {id:'back', name:'Backergebnis', note:'Nähe zur echten Napoletana: Leoparding, Cornicione', w:6, neg:false, s:{liefer:4, nap:5, pro:9, max:9}},
+  {id:'zut', name:'Zutatenkontrolle & Frische', note:'Mehl, Tomate, Mozzarella, Gare — alles deine Wahl', w:5, neg:false, s:{liefer:1, nap:10, pro:10, max:10}},
+  {id:'viel', name:'Vielseitigkeit', note:'Brot, Fleisch, Low & Slow, Blechgerichte', w:4, neg:false, s:{liefer:0, nap:9, pro:6, max:7}},
+  {id:'reib', name:'Reibung', note:'Rüstzeit, Reinigung, Platzbedarf, Lagerung — zählt negativ', w:3, neg:true, s:{liefer:1, nap:3, pro:4, max:7}}
+];
+
+const $ = id => document.getElementById(id);
+const eur = n => n.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €';
+const num = (n,d=2) => n.toLocaleString('de-DE',{minimumFractionDigits:d,maximumFractionDigits:d});
+
+/* ---------- Aufbau der bearbeitbaren Matrix ---------- */
+function applyState(st){
+  if(!st) return;
+  if(st.inputs){
+    Object.keys(st.inputs).forEach(id=>{
+      const el = document.getElementById(id);
+      if(el) el.value = st.inputs[id];
+    });
+  }
+  if(Array.isArray(st.crit)){
+    st.crit.forEach(sc=>{
+      const c = CRIT.find(x=>x.id===sc.id);
+      if(c){ c.w = sc.w; Object.assign(c.s, sc.s); }
+    });
+  }
+}
+
+function buildMatrix(){
+  $('matrixBody').innerHTML = CRIT.map(c=>{
+    const cells = DEV.map(d=>
+      `<td><input type="number" min="0" max="10" step="1" value="${c.s[d.key]}" data-crit="${c.id}" data-dev="${d.key}" aria-label="${c.name}, ${d.name}"></td>`
+    ).join('');
+    return `<tr><td class="crit ${c.neg?'neg':''}"><b>${c.name}</b>${c.note}<span class="w" id="wtag_${c.id}"></span></td>${cells}</tr>`;
+  }).join('');
+
+  $('weightGrid').innerHTML = CRIT.map(c=>
+    `<div class="field warm"><label>${c.name} <span class="val" id="wv_${c.id}">${c.w}</span></label>
+     <input type="range" id="w_${c.id}" min="0" max="10" step="1" value="${c.w}"></div>`
+  ).join('');
+}
+
+function readMatrix(){
+  document.querySelectorAll('#matrixBody input').forEach(el=>{
+    const c = CRIT.find(x=>x.id===el.dataset.crit);
+    let v = +el.value; if(isNaN(v)) v=0; v=Math.max(0,Math.min(10,v));
+    c.s[el.dataset.dev] = v;
+  });
+  CRIT.forEach(c=>{
+    c.w = +$('w_'+c.id).value;
+    $('wv_'+c.id).textContent = c.w;
+    $('wtag_'+c.id).textContent = ' · Gewicht ' + c.w;
+  });
+}
+
+/* ---------- Teil 1: Euro ---------- */
+function readState(){
+  const s = {pz:+$('pz').value, liefer:+$('liefer').value, zut:+$('zut').value,
+             gas:+$('gas').value, freq:+$('freq').value, jahre:+$('jahre').value};
+  s.eurPerKg = s.gas/11;
+  s.lieferSession = s.pz*s.liefer;
+  s.zutSession = s.pz*s.zut;
+  s.lifetime = s.freq*12*s.jahre;
+  return s;
+}
+
+function costOf(d, s){
+  if(d.virtual) return {kg:0, gasCost:0, price:0, perSession:s.lieferSession, sessionsPerBottle:Infinity};
+  const kgPerH = d.kw/KWH_PER_KG;
+  const kg = kgPerH * (+$(d.heatId).value/60 + (+$(d.bakeId).value/60)*(+$(d.thrId).value/100));
+  const gasCost = kg*s.eurPerKg;
+  return {kg, gasCost, price:+$(d.priceId).value, perSession:s.zutSession+gasCost, sessionsPerBottle:11/kg};
+}
+
+function render(){
+  ['pz','freq'].forEach(k=>$('v_'+k).textContent=$(k).value);
+  ['liefer','zut','gas'].forEach(k=>$('v_'+k).textContent=eur(+$(k).value));
+  ['nA','nB','oA','oB'].forEach(k=>$('v_'+k).textContent=$(k).value+' min');
+  ['nR','oR'].forEach(k=>$('v_'+k).textContent=$(k).value+' %');
+  $('v_jahre').textContent = $('jahre').value+' Jahre';
+
+  const s = readState();
+  readMatrix();
+
+  const res = DEV.map(d=>{
+    const c = costOf(d,s);
+    const saving = s.lieferSession - c.perSession;
+    const breakeven = (saving>0 && c.price>0) ? c.price/saving : (c.price===0?0:Infinity);
+    // Nutzwert
+    const wsum = CRIT.reduce((a,c2)=>a+c2.w,0) || 1;
+    const score = CRIT.reduce((a,c2)=>a + c2.w*(c2.neg ? (10-c2.s[d.key]) : c2.s[d.key]), 0)/wsum;
+    return {...d, ...c, saving, breakeven, score};
+  });
+
+  renderCards(s,res);
+  drawChart(s,res);
+  renderBars(res);
+  renderBridge(s,res);
+}
+
+function renderCards(s,res){
+  $('cards').innerHTML = res.filter(r=>!r.virtual).map(r=>{
+    const be = r.price===0 ? 'sofort' : (r.breakeven===Infinity ? '—' : Math.ceil(r.breakeven));
+    const months = (r.price>0 && r.breakeven!==Infinity) ? ` <small>≈ ${num(r.breakeven/s.freq,1)} Monate</small>` : '';
+    return `<div class="card${r.hero?' hero':''}">
+      <h3>${r.name}</h3><div class="meta">${r.meta}</div>
+      <div class="big">${be}${months}</div>
+      <div class="meta" style="margin:4px 0 0">${r.price===0?'kein Kaufpreis offen':'Sessions bis Break-even vs. Lieferdienst'}</div>
+      <div class="rowline"><span>Gas pro Session</span><span>${num(r.kg)} kg · ${eur(r.gasCost)}</span></div>
+      <div class="rowline"><span>Kosten pro Session</span><span>${eur(r.perSession)}</span></div>
+      <div class="rowline"><span>Kosten pro Pizza</span><span>${eur(r.perSession/s.pz)}</span></div>
+      <div class="rowline"><span>Ersparnis vs. Lieferung</span><span>${eur(r.saving)}</span></div>
+      <div class="tank"><div class="cap">${Math.floor(r.sessionsPerBottle)} Sessions pro 11-kg-Flasche</div>
+        <div class="bar"><div class="fill" style="width:${Math.min(100,r.sessionsPerBottle/60*100)}%"></div></div></div>
+    </div>`;
+  }).join('');
+
+  const pro = res.find(r=>r.key==='pro');
+  $('verdictObj').innerHTML = `Gegen den Lieferdienst ist der Koda 2 Pro nach <strong>${Math.ceil(pro.breakeven)} Sessions</strong> bezahlt. Gegen den Napoleon, der schon dasteht, spart er nur Gas — und das trägt den Kaufpreis nicht. Rein monetär gibt es also kein Argument für den Ooni. Deshalb Teil 2.`;
+}
+
+function drawChart(s,res){
+  const W=700,H=330,L=52,R=14,T=16,B=38;
+  const fin = res.filter(r=>!r.virtual && r.price>0 && r.breakeven!==Infinity).map(r=>r.breakeven);
+  const xMax = Math.max(60, Math.ceil((fin.length?Math.max(...fin):60)*1.35/10)*10);
+  const yMax = Math.max(s.lieferSession*xMax, ...res.map(r=>r.price+r.perSession*xMax))*1.05 || 1;
+  const X=v=>L+v/xMax*(W-L-R), Y=v=>H-B-v/yMax*(H-T-B);
+  let g='';
+  for(let i=0;i<=4;i++){const val=yMax*i/4,y=Y(val);
+    g+=`<line x1="${L}" y1="${y}" x2="${W-R}" y2="${y}" stroke="#332C27"/>`;
+    g+=`<text x="${L-8}" y="${y+4}" text-anchor="end" fill="#8D8279" font-family="JetBrains Mono,monospace" font-size="10">${Math.round(val)}</text>`;}
+  for(let i=0;i<=4;i++){const v=xMax*i/4;
+    g+=`<text x="${X(v)}" y="${H-14}" text-anchor="middle" fill="#8D8279" font-family="JetBrains Mono,monospace" font-size="10">${Math.round(v)}</text>`;}
+  g+=`<text x="${L}" y="${T+2}" fill="#8D8279" font-family="JetBrains Mono,monospace" font-size="10">€ kumuliert</text>`;
+  g+=`<text x="${W-R}" y="${H-14}" text-anchor="end" fill="#8D8279" font-family="JetBrains Mono,monospace" font-size="10">Sessions</text>`;
+  res.forEach(r=>{
+    const dash = r.virtual ? ' stroke-dasharray="5 4"' : '';
+    g+=`<line x1="${X(0)}" y1="${Y(r.price)}" x2="${X(xMax)}" y2="${Y(r.price+r.perSession*xMax)}" stroke="${r.color}" stroke-width="${r.virtual?2:2.5}"${dash}/>`;
+    if(!r.virtual && r.price>0 && r.breakeven!==Infinity && r.breakeven<=xMax){
+      const bx=X(r.breakeven), by=Y(s.lieferSession*r.breakeven);
+      g+=`<circle cx="${bx}" cy="${by}" r="4.5" fill="${r.color}" stroke="#14110F" stroke-width="2"/>`;
+      g+=`<text x="${bx}" y="${by-11}" text-anchor="middle" fill="${r.color}" font-family="JetBrains Mono,monospace" font-size="11" font-weight="700">${Math.ceil(r.breakeven)}</text>`;}
+  });
+  $('chart').innerHTML=g;
+}
+
+/* ---------- Teil 2: Nutzwert ---------- */
+function renderBars(res){
+  const best = Math.max(...res.map(r=>r.score),0.001);
+  $('bars').innerHTML = res.map(r=>
+    `<div class="brow${r.virtual?' dim':''}">
+       <div class="lbl"><b>${r.name}</b><span>${num(r.score,2)} / 10</span></div>
+       <div class="track"><div class="fill" style="width:${r.score/10*100}%"></div></div>
+     </div>`).join('');
+
+  const sorted = [...res].sort((a,b)=>b.score-a.score);
+  const w = sorted[0], second = sorted[1];
+  const nap = res.find(r=>r.key==='nap');
+  const abstand = w.score-second.score;
+  $('verdictSub').innerHTML = `Vorne liegt <strong>${w.name}</strong> mit ${num(w.score,2)} Punkten, ${abstand<0.15?'praktisch gleichauf mit':'vor'} ${second.name} (${num(second.score,2)}). Der Abstand zum Napoleon beträgt <strong>${num(w.score-nap.score,2)} Punkte</strong>. Wenn du das Gewicht für Reibung hochziehst, dreht sich das Verhältnis zwischen Pro und Max — der Max ist mit rund 80 cm Breite und knapp 40 kg das deutlich sperrigere Gerät.`;
+}
+
+/* ---------- Teil 3: Brücke ---------- */
+function renderBridge(s,res){
+  const nap=res.find(r=>r.key==='nap'), pro=res.find(r=>r.key==='pro'), max=res.find(r=>r.key==='max');
+  const card = (r)=>{
+    const kapital = r.price/s.lifetime;
+    const gasDelta = nap.gasCost - r.gasCost;      // Ersparnis pro Session
+    const netto = kapital - gasDelta;              // echter Mehrpreis pro Session
+    const dPkt = r.score - nap.score;
+    const proPkt = dPkt>0 ? netto/dPkt : null;
+    return `<div class="bcard">
+      <div class="k">${r.name} vs. Napoleon</div>
+      <div class="n" style="color:${r.color}">${netto<=0?'günstiger':eur(netto)}</div>
+      <div class="d">echter Mehrpreis pro Session über ${s.lifetime} Sessions — das sind ${eur(Math.max(netto,0)/s.pz)} pro Pizza.<br>
+      Nutzwertgewinn: <b>+${num(dPkt,2)} Punkte</b>${proPkt!==null?` · <b>${eur(proPkt)}</b> je Punkt und Session`:''}</div>
+    </div>`;
+  };
+  $('bridge').innerHTML = card(pro)+card(max);
+
+  const kProZ=pro.price/s.lifetime - (nap.gasCost-pro.gasCost);
+  const kMaxZ=max.price/s.lifetime - (nap.gasCost-max.gasCost);
+  const effPro=kProZ/Math.max(pro.score-nap.score,0.001), effMax=kMaxZ/Math.max(max.score-nap.score,0.001);
+  const winner = effPro<=effMax ? 'Koda 2 Pro' : 'Koda 2 Max';
+  $('verdictBridge').innerHTML = `Über ${s.lifetime} Sessions kostet dich der Ooni gegenüber dem Napoleon <strong>${eur(kProZ)}</strong> (Pro) bzw. <strong>${eur(kMaxZ)}</strong> (Max) pro Familienabend. Das ist die Zahl, gegen die du dein Ritual, die Prozesskontrolle und das Ergebnis abwägst — nicht die 609 €. Pro Nutzwertpunkt ist der <strong>${winner}</strong> die effizientere Anschaffung.`;
+}
+
+/* ---------- Zustand sichern: Adresse, Browser, App ---------- */
+const STORE_KEY = 'pizza-entscheidung:stand';
+let saveTimer = null;
+
+function collectState(){
+  const inputs = {};
+  document.querySelectorAll('input[id]').forEach(el=>{ inputs[el.id] = el.value; });
+  return {v:1, saved:new Date().toISOString(), inputs, crit:CRIT.map(c=>({id:c.id, w:c.w, s:{...c.s}}))};
+}
+
+function encodeState(st){ return btoa(unescape(encodeURIComponent(JSON.stringify(st)))); }
+function decodeState(txt){ return JSON.parse(decodeURIComponent(escape(atob(txt)))); }
+
+function setSaveLabel(text, cls){
+  const el = $('saveState');
+  el.textContent = text;
+  el.className = 'toolhint' + (cls ? ' ' + cls : '');
+}
+
+/* --- Laden --- */
+function loadFromHash(){
+  const h = location.hash;
+  if(!h.startsWith('#s=')) return null;
+  try{ return decodeState(h.slice(3)); }catch(e){ return null; }
+}
+function loadFromLocal(){
+  try{ const raw = localStorage.getItem(STORE_KEY); return raw ? JSON.parse(raw) : null; }
+  catch(e){ return null; }
+}
+async function loadFromHost(){
+  if(!window.storage) return null;
+  try{ const r = await window.storage.get(STORE_KEY); return r && r.value ? JSON.parse(r.value) : null; }
+  catch(e){ return null; }
+}
+
+/* --- Sichern: jeder verfuegbare Weg gleichzeitig --- */
+async function saveState(){
+  const st = collectState();
+  const enc = encodeState(st);
+  const ok = [];
+
+  try{ history.replaceState(null, '', '#s=' + enc); ok.push('Adresse'); }
+  catch(e){ try{ location.hash = 's=' + enc; ok.push('Adresse'); }catch(e2){} }
+
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(st)); ok.push('Browser'); }catch(e){}
+
+  if(window.storage){
+    try{ await window.storage.set(STORE_KEY, JSON.stringify(st)); ok.push('App'); }catch(e){}
+  }
+
+  const t = new Date(st.saved).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+  if(ok.length) setSaveLabel('Gesichert um ' + t + ' \u00b7 ' + ok.join(' + '), 'ok');
+  else setSaveLabel('Kein Speicherweg verf\u00fcgbar \u2014 Werte gelten nur jetzt', 'warn');
+}
+
+function queueSave(){
+  setSaveLabel('Sichert \u2026');
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveState, 600);
+}
+
+async function resetAll(){
+  try{ localStorage.removeItem(STORE_KEY); }catch(e){}
+  if(window.storage){ try{ await window.storage.delete(STORE_KEY); }catch(e){} }
+  try{ history.replaceState(null, '', location.pathname + location.search); }catch(e){}
+  location.reload();
+}
+
+async function init(){
+  const st = loadFromHash() || loadFromLocal() || await loadFromHost();
+  applyState(st);
+  buildMatrix();
+  if(st) applyState(st);
+  document.querySelectorAll('input').forEach(el=>{
+    el.addEventListener('input', ()=>{ render(); queueSave(); });
+  });
+  $('btnReset').addEventListener('click', resetAll);
+  render();
+
+  if(st && st.saved){
+    const d = new Date(st.saved);
+    setSaveLabel('Zuletzt gesichert: ' + d.toLocaleDateString('de-DE') + ', ' +
+                 d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}) + ' Uhr', 'ok');
+  }else{
+    setSaveLabel('Ausgangswerte \u2014 \u00c4nderungen werden automatisch gesichert');
+  }
+}
+
+init();
+</script>
+</body>
+</html>
